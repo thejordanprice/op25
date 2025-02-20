@@ -9,10 +9,7 @@
 <body>
     <div class="container mt-5">
         <h1>API Data Fetcher</h1>
-
-        <!-- First Table: Main Data Display -->
-        <div id="dataDisplay" class="table-responsive mb-5">
-            <h2>Main Data</h2>
+        <div id="dataDisplay" class="table-responsive">
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -33,27 +30,9 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- Second Table: TGIDs Tracking -->
-        <div id="tgidDisplay" class="table-responsive">
-            <h2>Tracked TGIDs</h2>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Frequency</th>
-                        <th>TGID</th>
-                    </tr>
-                </thead>
-                <tbody id="tgidRows">
-                    <!-- TGID data will be inserted here -->
-                </tbody>
-            </table>
-        </div>
     </div>
 
     <script>
-        const tgidSet = new Set(); // To keep track of unique TGIDs
-
         const fetchData = () => {
             fetch('http://localhost:8080/', {
                 method: 'POST',
@@ -65,10 +44,7 @@
             .then(response => response.json())
             .then(data => {
                 const dataRows = document.getElementById('dataRows');
-                const tgidRows = document.getElementById('tgidRows');
-
                 dataRows.innerHTML = ''; // Clear previous data
-                tgidRows.innerHTML = ''; // Clear previous TGID data
 
                 data.forEach(item => {
                     if (item.json_type === "change_freq" || item.json_type === "trunk_update") {
@@ -86,23 +62,7 @@
                             <td>${item.txchan || 'N/A'}</td>
                         `;
                         dataRows.appendChild(row);
-
-                        // Track TGIDs
-                        if (item.tgid) {
-                            tgidSet.add(item.tgid);
-                        }
                     }
-                });
-
-                // Populate the TGID table
-                tgidSet.forEach(tgid => {
-                    const freq = data.find(item => item.tgid === tgid)?.freq || 'N/A';
-                    const tgidRow = document.createElement('tr');
-                    tgidRow.innerHTML = `
-                        <td>${freq}</td>
-                        <td>${tgid}</td>
-                    `;
-                    tgidRows.appendChild(tgidRow);
                 });
             })
             .catch(error => {
