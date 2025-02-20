@@ -19,3 +19,4 @@ op25_python
 !cfg.json
 !meta.json
 !talkgroups.tsv
+!start_op25.sh
