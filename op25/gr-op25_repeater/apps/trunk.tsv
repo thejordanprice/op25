@@ -1,2 +1,2 @@
 "Sysname"	"Control Channel List"	"Offset"	"NAC"	"Modulation"	"TGID Tags File"	"Whitelist"	"Blacklist"	"Center Frequency"
-"P25 SYSTEM"	"876.54320"	"0"	"0"	"cqpsk"	""	""	""	""
+"Ohio MARCS P25"	"773.28125"	"0"	"0x345"	"cqpsk"	"talkgroups.tsv"	""	""	""
