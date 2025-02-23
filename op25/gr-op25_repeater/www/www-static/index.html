@@ -11,67 +11,125 @@
 </head>
 
 <body class="bg-light">
-
-  <div class="container mt-5">
-
-    <h1 class="text-center mb-4">OP25 Client</h1>
-
-    <!-- Queue Buttons -->
-    <div class="d-flex justify-content-center mb-4">
-      <button id="addToQueueButton" class="btn btn-primary mx-2">Add Command to Queue</button>
-      <button id="sendQueueButton" class="btn btn-success mx-2">Send Queue</button>
-    </div>
-
-    <!-- Current Frequency and System Info Section -->
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <h3 class="card-title mb-0">Current Frequency & System Info</h3>
-          </div>
-          <div class="card-body">
-            <p><strong>Current Frequency:</strong> <span id="currentFreq">N/A</span> Hz</p>
-            <p><strong>WACN:</strong> <span id="currentWACN">N/A</span></p>
-            <p><strong>SYSID:</strong> <span id="currentSYSID">N/A</span></p>
-            <p><strong>Error:</strong> <span id="currentError">N/A</span></p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Active TGIDs on Frequencies -->
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-warning text-dark">
-            <h3 class="card-title mb-0">Active TGIDs on Frequencies</h3>
-          </div>
-          <div class="card-body">
-            <ul id="tgidFrequencyList" class="list-group list-group-flush"></ul>
-          </div>
-        </div>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="#">OP25 Client</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="statusTab">Status</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="plotTab">Plots</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" id="aboutTab">About</a>
+          </li>
+        </ul>
       </div>
     </div>
+  </nav>
 
-    <!-- Send Queue and Response Data Section -->
-    <div class="row mb-4">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-secondary text-white">
-            <h3 class="card-title mb-0">Send Queue</h3>
+  <div class="container mt-5 pt-5">
+    <!-- Header Section -->
+    <div class="text-center mb-4">
+      <h1 class="display-4">OP25 Client</h1>
+      <p class="lead">Advanced radio communication monitoring and control.</p>
+    </div>
+
+    <!-- Controls Section -->
+    <div class="mb-4">
+      <div class="d-flex justify-content-center flex-wrap gap-2">
+        <button id="addToQueueButton" class="btn btn-primary">Add Update</button>
+        <button id="sendQueueButton" class="btn btn-success">Send Queue</button>
+        <button id="dumpTgidsButton" class="btn btn-info">Dump TGIDs</button>
+        <button id="channelPrevButton" class="btn btn-secondary">&lt; Prev Channel</button>
+        <button id="channelNextButton" class="btn btn-secondary">Next Channel &gt;</button>
+        <select id="channelSelect" class="form-select w-auto"></select>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="statusView">
+      <!-- Current Frequency and System Info -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+              <h3 class="card-title mb-0">System Status</h3>
+            </div>
+            <div class="card-body">
+              <p><strong>Channel:</strong> <span id="currentChannel">N/A</span></p>
+              <p><strong>Frequency:</strong> <span id="currentFreq">N/A</span> MHz</p>
+              <p><strong>WACN:</strong> <span id="currentWACN">N/A</span></p>
+              <p><strong>SYSID:</strong> <span id="currentSYSID">N/A</span></p>
+              <p><strong>Error:</strong> <span id="currentError">N/A</span> Hz</p>
+              <p><strong>TGID:</strong> <span id="currentTgid">N/A</span></p>
+            </div>
           </div>
-          <div class="card-body">
-            <ul id="sendQueueList" class="list-group list-group-flush"></ul>
+        </div>
+
+        <!-- Active TGIDs on Frequencies -->
+        <div class="col-md-6">
+          <div class="card shadow-lg">
+            <div class="card-header bg-warning text-dark">
+              <h3 class="card-title mb-0">Active TGIDs</h3>
+            </div>
+            <div class="card-body">
+              <ul id="tgidFrequencyList" class="list-group list-group-flush"></ul>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Response Container -->
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-header bg-info text-white">
-            <h3 class="card-title mb-0">Response Data</h3>
+      <!-- Send Queue and Response Data -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-lg">
+            <div class="card-header bg-secondary text-white">
+              <h3 class="card-title mb-0">Command Queue</h3>
+            </div>
+            <div class="card-body">
+              <ul id="sendQueueList" class="list-group list-group-flush"></ul>
+            </div>
           </div>
-          <div class="card-body" id="responseContainer">
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-lg">
+            <div class="card-header bg-info text-white">
+              <h3 class="card-title mb-0">Server Response</h3>
+            </div>
+            <div class="card-body" id="responseContainer"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plot View (Hidden by Default) -->
+    <div id="plotView" class="d-none">
+      <div class="card shadow-lg">
+        <div class="card-header bg-success text-white">
+          <h3 class="card-title mb-0">Plot Data</h3>
+        </div>
+        <div class="card-body">
+          <p>Placeholder for plot images (requires server-side plot generation).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- About View (Hidden by Default) -->
+    <div id="aboutView" class="d-none">
+      <div class="card shadow-lg">
+        <div class="card-header bg-dark text-white">
+          <h3 class="card-title mb-0">About OP25 Client</h3>
+        </div>
+        <div class="card-body">
+          <p>A modern UI for OP25, built on boatbod/op25.</p>
         </div>
       </div>
     </div>
@@ -86,7 +144,6 @@
   </div>
 
   <script src="app.js"></script>
-
 </body>
 
 </html>
