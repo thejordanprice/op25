@@ -1,124 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Data Fetcher</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OP25 Client</title>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1>API Data Fetcher</h1>
+  <h1>OP25 Client</h1>
+  <button id="addToQueueButton">Add Command to Queue</button>
+  <button id="sendQueueButton">Send Queue</button>
 
-        <!-- First Table: Main Data Display -->
-        <div id="dataDisplay" class="table-responsive mb-5">
-            <h2>Main Data</h2>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Frequency</th>
-                        <th>System</th>
-                        <th>Error</th>
-                        <th>JSON Type</th>
-                        <th>TDID</th>
-                        <th>Tag</th>
-                        <th>NAC</th>
-                        <th>WACN</th>
-                        <th>TX Channel</th>
-                        <th>RX Channel</th>
-                    </tr>
-                </thead>
-                <tbody id="dataRows">
-                    <!-- Data will be inserted here -->
-                </tbody>
-            </table>
-        </div>
+  <h2>Send Queue</h2>
+  <ul id="sendQueueList"></ul>
 
-        <!-- Second Table: TGIDs Tracking -->
-        <div id="tgidDisplay" class="table-responsive">
-            <h2>Tracked TGIDs</h2>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Frequency</th>
-                        <th>TGID</th>
-                    </tr>
-                </thead>
-                <tbody id="tgidRows">
-                    <!-- TGID data will be inserted here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
+  <h3>Status: <span id="status"></span></h3>
+  <h3 style="color: red" id="error"></h3>
 
-    <script>
-        const tgidSet = new Set(); // To keep track of unique TGIDs
-
-        const fetchData = () => {
-            fetch('http://localhost:8080/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify([{"command": "update", "arg1": 1, "arg2": 0}]),
-            })
-            .then(response => response.json())
-            .then(data => {
-                const dataRows = document.getElementById('dataRows');
-                const tgidRows = document.getElementById('tgidRows');
-
-                dataRows.innerHTML = ''; // Clear previous data
-                tgidRows.innerHTML = ''; // Clear previous TGID data
-
-                data.forEach(item => {
-                    if (item.json_type === "change_freq" || item.json_type === "trunk_update") {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.freq || 'N/A'}</td>
-                            <td>${item.system || 'N/A'}</td>
-                            <td>${item.error || 'N/A'}</td>
-                            <td>${item.json_type || 'N/A'}</td>
-                            <td>${item.tgid || 'N/A'}</td>
-                            <td>${item.tag || 'N/A'}</td>
-                            <td>${item.nac || 'N/A'}</td>
-                            <td>${item.wacn || 'N/A'}</td>
-                            <td>${item.rxchan || 'N/A'}</td>
-                            <td>${item.txchan || 'N/A'}</td>
-                        `;
-                        dataRows.appendChild(row);
-
-                        // Track TGIDs
-                        if (item.tgid) {
-                            tgidSet.add(item.tgid);
-                        }
-                    }
-                });
-
-                // Populate the TGID table
-                tgidSet.forEach(tgid => {
-                    const freq = data.find(item => item.tgid === tgid)?.freq || 'N/A';
-                    const tgidRow = document.createElement('tr');
-                    tgidRow.innerHTML = `
-                        <td>${freq}</td>
-                        <td>${tgid}</td>
-                    `;
-                    tgidRows.appendChild(tgidRow);
-                });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        };
-
-        // Fetch data every 2 seconds
-        setInterval(fetchData, 2000);
-
-        // Initial fetch
-        fetchData();
-    </script>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
