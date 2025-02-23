@@ -10,6 +10,21 @@
   <button id="addToQueueButton">Add Command to Queue</button>
   <button id="sendQueueButton">Send Queue</button>
 
+  <!-- Add elements to display current frequency, WACN, SYSID, and error -->
+  <h3>Current Frequency: <span id="currentFreq">N/A</span> Hz</h3>
+  <h3>WACN: <span id="currentWACN">N/A</span></h3>
+  <h3>SYSID: <span id="currentSYSID">N/A</span></h3>
+  <h3>Error: <span id="currentError">N/A</span></h3>
+
+  <!-- Add a section to keep track of active TGIDs and associated frequencies -->
+  <h3>Active TGIDs on Frequencies:</h3>
+  <ul id="tgidFrequencyList"></ul>
+
+  <!-- Container for displaying the response data -->
+  <div id="responseContainer">
+    <!-- The response data will be dynamically inserted here -->
+  </div>
+
   <h2>Send Queue</h2>
   <ul id="sendQueueList"></ul>
 

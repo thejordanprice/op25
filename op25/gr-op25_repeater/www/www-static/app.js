@@ -1,22 +1,68 @@
-// app.js
-
 // State object to manage the queue, API interaction, and status
 let state = {
   sendQueue: [
-    { command: "get_config", arg1: 0, arg2: 0 }, // Initial command when the page loads
+    { command: "get_config", arg1: 0, arg2: 0 },
   ],
   status: null,
   error: null,
+  tgidFrequencyRecord: {}, // Record of TGIDs and their associated frequencies
 };
 
-// Utility function to display the current queue in the UI
-function displaySendQueue() {
-  const queueList = document.getElementById('sendQueueList');
-  queueList.innerHTML = '';
-  state.sendQueue.forEach((command, index) => {
+// Function to display the current frequency, WACN, SYSID, and error
+function updateCurrentInfo(freq, wacn, sysid, error) {
+  const currentFreq = document.getElementById('currentFreq');
+  const currentWACN = document.getElementById('currentWACN');
+  const currentSYSID = document.getElementById('currentSYSID');
+  const currentError = document.getElementById('currentError');
+  
+  currentFreq.textContent = freq ? `${freq}` : 'N/A';
+  currentWACN.textContent = wacn ? wacn : 'N/A';
+  currentSYSID.textContent = sysid ? sysid : 'N/A';
+  currentError.textContent = error ? error : 'N/A';
+}
+
+// Function to update the TGID-Frequency relationship record
+function updateTgidFrequencyRecord(tgid, freq) {
+  if (!state.tgidFrequencyRecord[freq]) {
+    state.tgidFrequencyRecord[freq] = [];
+  }
+
+  if (!state.tgidFrequencyRecord[freq].includes(tgid)) {
+    state.tgidFrequencyRecord[freq].push(tgid);
+  }
+
+  // Display the updated TGID-Frequency record
+  displayTgidFrequencyRecord();
+}
+
+// Function to display the active TGIDs on frequencies
+function displayTgidFrequencyRecord() {
+  const tgidFrequencyList = document.getElementById('tgidFrequencyList');
+  tgidFrequencyList.innerHTML = ''; // Clear previous entries
+
+  for (const freq in state.tgidFrequencyRecord) {
     const listItem = document.createElement('li');
-    listItem.textContent = `${command.command} (arg1: ${command.arg1}, arg2: ${command.arg2})`;
-    queueList.appendChild(listItem);
+    listItem.textContent = `Frequency: ${freq} Hz, TGIDs: ${state.tgidFrequencyRecord[freq].join(', ')}`;
+    tgidFrequencyList.appendChild(listItem);
+  }
+}
+
+// Function to display the response data on the page
+function displayResponseData(data) {
+  const responseContainer = document.getElementById('responseContainer');
+  responseContainer.innerHTML = ''; // Clear any previous content
+
+  data.forEach((entry) => {
+    if (entry.json_type === 'change_freq') {
+      // Update current frequency, WACN, SYSID, and error
+      updateCurrentInfo(entry.freq, entry.wacn, entry.sysid, entry.error);
+
+      // Update the active TGID-Frequency record
+      if (entry.tgid) {
+        updateTgidFrequencyRecord(entry.tgid, entry.freq);
+      }
+    }
+    // You can add more checks for other types of data (e.g., "trunk_update", "rx_update", etc.)
   });
 }
 
@@ -54,13 +100,10 @@ async function sendQueue() {
 
     const data = await response.json();
     
-    // If the response contains an array of objects, handle it
-    if (Array.isArray(data) && data.length > 0) {
-      state.status = `Success: ${response.status} - Received ${data.length} entries`;
-    } else {
-      state.status = `Success: ${response.status} - No data returned`;
-    }
+    // Display the response data in the DOM
+    displayResponseData(data);
 
+    state.status = `Success: ${response.status} - Received ${data.length} entries`;
     state.error = null; // Clear any previous errors
     displayStatus();
 
@@ -92,12 +135,23 @@ function displayStatus() {
   }
 }
 
+// Function to display the current queue in the UI
+function displaySendQueue() {
+  const queueList = document.getElementById('sendQueueList');
+  queueList.innerHTML = '';
+  state.sendQueue.forEach((command, index) => {
+    const listItem = document.createElement('li');
+    listItem.textContent = `${command.command} (arg1: ${command.arg1}, arg2: ${command.arg2})`;
+    queueList.appendChild(listItem);
+  });
+}
+
 // Add event listeners for the buttons
 document.getElementById('addToQueueButton').addEventListener('click', () => {
   const command = {
-    command: 'exampleCommand',
-    arg1: 1,
-    arg2: 2,
+    command: 'update',
+    arg1: 0,
+    arg2: 0,
   };
   addToSendQueue(command); // Add a new command to the queue
 });
@@ -108,5 +162,14 @@ document.getElementById('sendQueueButton').addEventListener('click', () => {
 
 // Send the initial command when the page loads
 window.addEventListener('load', () => {
-  sendQueue();
+  // Add the update command every second
+  setInterval(() => {
+    const updateCommand = {
+      command: 'update',
+      arg1: 0,
+      arg2: 0,
+    };
+    addToSendQueue(updateCommand); // Add update command to the queue every second
+    sendQueue(); // Send the queue after adding the command
+  }, 1000); // 1000ms = 1 second
 });
