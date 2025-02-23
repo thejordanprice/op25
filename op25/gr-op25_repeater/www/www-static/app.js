@@ -1,12 +1,17 @@
 // State management
 let state = {
   sendQueue: [],
-  channels: [],
-  currentChannelIndex: 0,
-  status: null,
-  error: null,
-  tgidFrequencyRecord: {},
-  systemInfo: { freq: null, wacn: null, sysid: null, error: null, tgid: null, channelName: "N/A" },
+  connectionState: "disconnected",
+  systemInfo: { 
+    freq: null, 
+    wacn: null, 
+    sysid: null, 
+    error: null, 
+    tgid: null, 
+    nac: null, 
+    rfid: null, 
+    stid: null 
+  },
 };
 
 // Utility to format frequency in MHz
@@ -14,41 +19,19 @@ const formatFreq = (freq) => freq ? (freq / 1000000).toFixed(6) : "N/A";
 
 // Update system status display
 function updateSystemInfo() {
-  const { freq, wacn, sysid, error, tgid, channelName } = state.systemInfo;
-  document.getElementById('currentChannel').textContent = channelName;
+  const { freq, wacn, sysid, error, tgid, nac, rfid, stid } = state.systemInfo;
   document.getElementById('currentFreq').textContent = formatFreq(freq);
   document.getElementById('currentWACN').textContent = wacn || "N/A";
   document.getElementById('currentSYSID').textContent = sysid || "N/A";
-  document.getElementById('currentError').textContent = error || "N/A";
+  document.getElementById('currentError').textContent = error ? `${error} Hz` : "N/A";
   document.getElementById('currentTgid').textContent = tgid || "N/A";
-}
-
-// Update TGID-Frequency record
-function updateTgidFrequencyRecord(tgid, freq) {
-  const freqKey = formatFreq(freq);
-  if (!state.tgidFrequencyRecord[freqKey]) state.tgidFrequencyRecord[freqKey] = [];
-  if (tgid && !state.tgidFrequencyRecord[freqKey].includes(tgid)) {
-    state.tgidFrequencyRecord[freqKey].push(tgid);
-  }
-  displayTgidFrequencyRecord();
-}
-
-// Display TGID-Frequency list
-function displayTgidFrequencyRecord() {
-  const list = document.getElementById('tgidFrequencyList');
-  list.innerHTML = "";
-  for (const freq in state.tgidFrequencyRecord) {
-    const item = document.createElement('li');
-    item.className = "list-group-item";
-    item.textContent = `Freq: ${freq} MHz, TGIDs: ${state.tgidFrequencyRecord[freq].join(', ')}`;
-    list.appendChild(item);
-  }
+  document.getElementById('currentNac').textContent = nac || "N/A";
+  document.getElementById('currentRfid').textContent = rfid || "N/A";
+  document.getElementById('currentStid').textContent = stid || "N/A";
 }
 
 // Display response data
 function displayResponseData(data) {
-  const container = document.getElementById('responseContainer');
-  container.innerHTML = "";
   data.forEach(entry => {
     switch (entry.json_type) {
       case "change_freq":
@@ -58,37 +41,73 @@ function displayResponseData(data) {
         state.systemInfo.error = entry.error;
         state.systemInfo.tgid = entry.tgid;
         updateSystemInfo();
-        updateTgidFrequencyRecord(entry.tgid, entry.freq);
         break;
-      case "channel_update":
-        state.channels = entry.channels || [];
-        state.systemInfo.channelName = state.channels[state.currentChannelIndex] || "N/A";
-        updateChannelSelect();
-        updateSystemInfo();
-        break;
+
       case "trunk_update":
-        // Add more detailed trunking info if desired
+        if (entry.nac !== undefined) state.systemInfo.nac = entry.nac;
+        for (const nac in entry) {
+          if (!/^\d/.test(nac)) continue;
+          
+          const nacData = entry[nac];
+          const isP25 = nacData.type === 'p25';
+          const isSmartnet = nacData.type === 'smartnet';
+
+          state.systemInfo.nac = nac === state.systemInfo.nac || !nacData.system ? entry.nac : state.systemInfo.nac;
+          state.systemInfo.rfid = nacData.rfid || null;
+          state.systemInfo.stid = nacData.stid || null;
+          updateSystemInfo();
+
+          const tbody = document.getElementById('tgidFrequencyBody');
+          const tableTitle = document.getElementById('tableTitle');
+          tbody.innerHTML = "";
+          tableTitle.textContent = `System Frequencies (NAC: ${nac})`;
+
+          for (const freq in nacData.frequency_data) {
+            const fData = nacData.frequency_data[freq];
+            const row = document.createElement('tr');
+            const freqMHz = formatFreq(parseInt(freq));
+            const chanType = fData.type;
+            const tg1 = fData.tgids[0];
+            const tg2 = fData.tgids[1];
+            let mode = "";
+            let tgCell = "";
+
+            if (chanType === 'control') {
+              tgCell = `<td colspan="2" class="text-center">Control</td>`;
+              mode = isP25 ? "CC" : isSmartnet ? "CC" : "CC";
+              fData.counter = "";
+            } else if (chanType === 'alternate') {
+              mode = isP25 ? "Sec CC" : "Alt CC";
+              tgCell = `<td colspan="2" class="text-center">-</td>`;
+            } else {
+              mode = (isSmartnet && (tg1 || tg2)) ? fData.mode : (tg1 === tg2 ? "FDMA" : "TDMA");
+              tgCell = (tg1 === null && tg2 === null) ? `<td colspan="2" class="text-center">-</td>` :
+                       (tg1 === tg2) ? `<td colspan="2" class="text-center">${tg1 || '-'}</td>` :
+                       `<td class="text-center">${tg2 || '-'}</td><td class="text-center">${tg1 || '-'}</td>`;
+            }
+
+            row.innerHTML = `
+              <td>${freqMHz}</td>
+              <td class="text-end">${fData.last_activity || ''}</td>
+              ${tgCell}
+              <td class="text-center">${mode}</td>
+              <td class="text-end">${fData.counter || ''}</td>
+            `;
+            tbody.appendChild(row);
+          }
+        }
         break;
+
       default:
-        const p = document.createElement('p');
-        p.textContent = JSON.stringify(entry);
-        container.appendChild(p);
+        console.log("Unhandled response:", entry);
     }
   });
 }
 
-// Update channel dropdown
-function updateChannelSelect() {
-  const select = document.getElementById('channelSelect');
-  select.innerHTML = state.channels.map((ch, i) => `<option value="${i}">${ch}</option>`).join('');
-  select.value = state.currentChannelIndex;
-}
-
 // Add command to queue
 function addToSendQueue(command, arg1 = 0, arg2 = 0) {
-  if (state.sendQueue.length >= 10) state.sendQueue.shift(); // Limit queue size
+  if (state.sendQueue.length >= 10) state.sendQueue.shift();
   state.sendQueue.push({ command, arg1, arg2 });
-  displaySendQueue();
 }
 
 // Send queue to server
@@ -107,68 +126,44 @@ async function sendQueue() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     displayResponseData(data);
-    showStatus("status", `Sent ${queueData.length} commands, received ${data.length} entries`);
-    state.sendQueue = []; // Clear queue
-    displaySendQueue();
+    showStatus("connected", "Connected");
+    state.sendQueue = [];
   } catch (error) {
-    showStatus("error", `Failed to send queue: ${error.message}`);
+    showStatus("error", `Error: ${error.message}`);
   }
 }
 
-// Display queue
-function displaySendQueue() {
-  const list = document.getElementById('sendQueueList');
-  list.innerHTML = state.sendQueue.map(cmd => 
-    `<li class="list-group-item">${cmd.command} (arg1: ${cmd.arg1}, arg2: ${cmd.arg2})</li>`
-  ).join('');
-}
-
-// Show status or error
-function showStatus(type, message) {
-  const statusEl = document.getElementById('status');
-  const errorEl = document.getElementById('error');
-  statusEl.style.display = type === "status" ? "block" : "none";
-  errorEl.style.display = type === "error" ? "block" : "none";
-  (type === "status" ? statusEl : errorEl).textContent = message;
-}
-
-// Switch views
-function switchView(view) {
-  const views = ["statusView", "plotView", "aboutView"];
-  views.forEach(v => document.getElementById(v).classList.toggle("d-none", v !== view));
-}
-
-// Event listeners
-document.getElementById('addToQueueButton').addEventListener('click', () => 
-  addToSendQueue("update", 0, state.channels[state.currentChannelIndex] || 0));
-document.getElementById('sendQueueButton').addEventListener('click', sendQueue);
-document.getElementById('dumpTgidsButton').addEventListener('click', () => 
-  addToSendQueue("dump_tgids", 0, state.channels[state.currentChannelIndex] || 0));
-document.getElementById('channelPrevButton').addEventListener('click', () => {
-  if (state.channels.length) {
-    state.currentChannelIndex = (state.currentChannelIndex - 1 + state.channels.length) % state.channels.length;
-    updateChannelSelect();
+// Show connection status
+function showStatus(stateName, message) {
+  const statusEl = document.getElementById('connectionStatus');
+  state.connectionState = stateName;
+  statusEl.className = "alert";
+  statusEl.classList.remove("alert-success", "alert-warning", "alert-danger");
+  
+  switch (stateName) {
+    case "connected":
+      statusEl.classList.add("alert-success");
+      statusEl.textContent = message || "Connected";
+      break;
+    case "error":
+      statusEl.classList.add("alert-warning");
+      statusEl.textContent = message || "Error";
+      break;
+    case "disconnected":
+      statusEl.classList.add("alert-danger");
+      statusEl.textContent = message || "Disconnected";
+      break;
   }
-});
-document.getElementById('channelNextButton').addEventListener('click', () => {
-  if (state.channels.length) {
-    state.currentChannelIndex = (state.currentChannelIndex + 1) % state.channels.length;
-    updateChannelSelect();
-  }
-});
-document.getElementById('channelSelect').addEventListener('change', (e) => {
-  state.currentChannelIndex = parseInt(e.target.value);
-});
-document.getElementById('statusTab').addEventListener('click', () => switchView("statusView"));
-document.getElementById('plotTab').addEventListener('click', () => switchView("plotView"));
-document.getElementById('aboutTab').addEventListener('click', () => switchView("aboutView"));
+  statusEl.style.display = "block";
+}
 
 // Initial setup
 window.addEventListener('load', () => {
-  addToSendQueue("get_terminal_config", 0, 0); // Initial config fetch
+  showStatus("disconnected", "Disconnected");
+  addToSendQueue("get_terminal_config", 0, 0);
   sendQueue();
   setInterval(() => {
-    addToSendQueue("update", 0, state.channels[state.currentChannelIndex] || 0);
+    addToSendQueue("update", 0, 0);
     sendQueue();
-  }, 1000); // Poll every second
+  }, 1000);
 });
